@@ -1,36 +1,44 @@
-# Capa 5: Enrutamiento Dinámico y Anonimato de Red
+# Capa 5: Enrutamiento Dinámico y Anonimato de Red (Tor-Only P2P)
 
-Esta capa constituye la frontera exterior de la arquitectura de SignalFlow. Asume un entorno de red inherentemente hostil, donde los Proveedores de Servicios de Internet (ISPs), agencias gubernamentales o nodos maliciosos monitorizan activamente el tráfico. El objetivo de esta capa es proteger los **metadatos** (quién habla con quién, cuándo y desde dónde) antes de que el tráfico alcance las capas de cifrado.
+Esta capa constituye la frontera exterior de la arquitectura de SignalFlow. Asume un entorno de red inherentemente hostil, donde los Proveedores de Servicios de Internet (ISPs), agencias gubernamentales o nodos maliciosos monitorizan activamente el tráfico.
 
-## 1. Topología de Red Híbrida (Tor + WebRTC)
+A diferencia de las arquitecturas comerciales que buscan baja latencia mediante UDP/WebRTC (lo cual introduce riesgos críticos de fugas de IP a través de _ICE Candidates_), SignalFlow prioriza matemáticamente la **invisibilidad de los metadatos**, aceptando la asincronía y la latencia como un costo necesario para la seguridad operativa (OpSec).
 
-Para resolver el dilema entre "Anonimato Absoluto" (lento) y "Comunicación en Tiempo Real" (vulnerable a fugas de IP), SignalFlow implementa una arquitectura dividida en dos fases o planos operativos:
+![Comunication](../images/Comunication_Layer.excalidraw.svg)
 
-### 1.1. Fase 1: Plano de Control y Señalización (Vía Tor)
+## 1. Topología de Red: P2P Estricto y Soberanía de Infraestructura
 
-El servidor central de SignalFlow no procesa, no enruta y no almacena mensajes. Su única función es actuar como un intermediario ciego para que dos nodos intercambien sus credenciales de conexión WebRTC (Ofertas y Respuestas SDP).
+Para resolver el dilema del mapeo de red (Sybil Attacks) y evitar la dependencia de infraestructuras centralizadas o _Swarms_ de terceros, SignalFlow implementa una arquitectura de Soberanía de Infraestructura. Todo el tráfico fluye exclusivamente a través de la darknet utilizando el protocolo de Tor.
 
-- **Tor Hidden Services (v3):** El servidor opera exclusivamente dentro de la darknet utilizando una dirección criptográfica `.onion`. A nivel de sistema operativo (Node.js/Python), el servidor está anclado estrictamente a `127.0.0.1` y no expone puertos a la red pública (Clearnet).
-- **Proxy SOCKS5 Local:** Los clientes no utilizan DNS estándar para ubicar el servidor (previniendo fugas y envenenamiento DNS). Todo el tráfico inicial se enruta a través de un demonio Tor embebido en el cliente, el cual levanta un proxy SOCKS5 local.
-- **Beneficio de Seguridad:** El ISP del usuario solo detecta tráfico cifrado hacia la red Tor. El Servidor de SignalFlow solo registra la IP del "Nodo de Salida" de Tor, haciendo matemáticamente imposible vincular la solicitud con la IP real del usuario.
+### 1.1. Conexión Directa y Marcado Ciego (Blind Dialing)
 
-### 1.2. Fase 2: Plano de Datos (WebRTC Ofuscado)
+El sistema no utiliza servidores de señalización para descubrir IPs ni mantiene un "estado de conexión" (presencia) público.
 
-Una vez que las descripciones de sesión (SDP) se han intercambiado a través de la red Tor, los clientes saltan a un canal de alta velocidad (WebRTC) para la transmisión del texto cifrado por la Capa 4. Para mantener el anonimato en este salto P2P, se imponen las siguientes directivas:
+- **Tor Hidden Services (v3):** Cada cliente de SignalFlow integra un demonio Tor (`arti-client`) que levanta un servicio oculto (`.onion`) anclado estrictamente a `127.0.0.1`.
+- **Blind Dialing:** Para enviar un mensaje, el cliente de Alice no verifica el estado de Bob. Simplemente intenta abrir un circuito Tor cifrado hacia la dirección `.onion` de Bob. Si Bob está offline, la conexión falla silenciosamente sin alertar a la red. Si está online, el circuito se establece y los datos fluyen de extremo a extremo.
 
-- **Bloqueo de P2P Directo (Strict TURN):** La conexión Peer-to-Peer directa está deshabilitada por diseño. Para evitar que el "Cliente A" descubra la IP pública del "Cliente B", todas las conexiones se fuerzan a través de servidores de relevo TURN (_Traversal Using Relays around NAT_).
-- **Ofuscación LAN (mDNS):** Las políticas de WebRTC por defecto exponen direcciones IP de red local (ej. `192.168.1.5`) mediante _ICE Candidates_. SignalFlow fuerza el uso de Multicast DNS (mDNS) para enmascarar estas IPs con hostnames temporales y anónimos (ej. `c8a7b...local`).
-- **Prevención de Fugas UDP:** Para evitar que el tráfico escape de túneles VPN activos a nivel de sistema operativo (un fallo común en protocolos basados en UDP), la aplicación cliente fuerza a WebRTC a operar estrictamente sobre el protocolo TCP (`turn:server?transport=tcp`).
+### 1.2. Asincronía Local (Store-and-Forward)
+
+SignalFlow está diseñado para operar en entornos de conectividad intermitente.
+
+- Si el destinatario está offline, el mensaje no se pierde ni se envía a un servidor ajeno. El _payload_ se cifra inmediatamente con la llave _Double Ratchet_ del destinatario y se encola en la base de datos local (Bandeja de Salida Ciega).
+- Un proceso en segundo plano (Background Worker) reintenta la conexión periódicamente hasta que el envío es exitoso, momento en el cual el mensaje se purga del almacenamiento local.
+
+### 1.3. Modo Paranoia: Nodos Relevo Auto-hospedados (Self-Hosted Relays)
+
+Para usuarios que requieren alta disponibilidad sin comprometer su ubicación física manteniendo su dispositivo primario encendido, SignalFlow soporta infraestructura delegada propia.
+
+- Un usuario puede desplegar un demonio de SignalFlow en modo "Relay" en hardware propio (ej. una Raspberry Pi en una ubicación segura).
+- Este nodo actúa como un buzón ciego personal 24/7. Si Alice no puede conectar directamente al móvil de Bob, la aplicación enruta automáticamente el paquete cifrado al _Self-Hosted Relay_ de Bob, manteniendo la filosofía _Zero-Trust_ al no requerir confianza en servidores administrados por extraños.
 
 ## 2. Contramedidas de Análisis de Tráfico (Traffic Analysis Defenses)
 
-Incluso con el enrutamiento anonimizado, un adversario que observe pasivamente un nodo puede utilizar análisis estadístico para deducir patrones de comportamiento (por ejemplo, identificar una ráfaga de paquetes pequeños como "tecleo" frente a un paquete grande como una "imagen").
+Incluso con el enrutamiento anonimizado, un adversario pasivo a nivel de ISP podría utilizar análisis estadístico para deducir patrones de comportamiento. Para mitigar los ataques de inferencia y correlación, SignalFlow implementa estrictas reglas de modelado de red:
 
-Para mitigar los ataques de inferencia, SignalFlow implementa modelado de tráfico en el túnel WebRTC:
-
-- **Traffic Padding (Relleno de Paquetes):** El tamaño de los paquetes es uniforme. Todos los mensajes enviados a través de _WebRTC Data Channels_ se normalizan a un tamaño fijo (ej. bloques de 4 KB). Si un mensaje es menor a este tamaño, el cliente inyecta bytes aleatorios (ruido criptográfico) antes de aplicar el cifrado _Double Ratchet_.
-- **Cover Traffic (Tráfico de Cobertura):** Para ocultar la temporalidad de las conversaciones, el cliente genera pulsos de red falsos (_Heartbeats_ y ruido blanco) hacia el servidor TURN a intervalos aleatorios y continuos. Esto satura el canal con actividad ilegítima, imposibilitando que un observador externo determine si el usuario está enviando un mensaje real o si la aplicación simplemente está en segundo plano.
+- **Identidades Efímeras (Key-Based Routing):** SignalFlow erradica la dependencia de identificadores del mundo real (como números de teléfono o correos). El enrutamiento se basa exclusivamente en direcciones `.onion` derivadas de llaves públicas Ed25519. Si una identidad se ve comprometida operativamente, el usuario puede "quemar" la llave y generar una identidad nueva e inconexa en milisegundos.
+- **Traffic Padding Estricto (Relleno de Paquetes):** El tamaño de los paquetes es uniforme. Todos los mensajes se normalizan a un tamaño de bloque fijo (ej. 8 KB). Si el texto es menor a este tamaño, el cliente inyecta bytes aleatorios (ruido criptográfico) antes de aplicar el cifrado. Para un observador externo, todos los paquetes transmitidos son cajas negras idénticas en peso.
+- **Jitter en Reintentos (Ofuscación Temporal):** Las reconexiones para enviar mensajes encolados no ocurren en intervalos fijos predecibles (ej. cada 60.00 segundos). El cliente inyecta _Jitter_ (entropía temporal) en cada intento, variando los tiempos de espera de forma aleatoria para destruir cualquier firma de automatización que un atacante intente perfilar.
 
 ---
 
-> **Nota Arquitectónica:** Si la Capa 5 (Red) es vulnerada o interceptada, la confidencialidad de la conversación queda inmediatamente garantizada por la **Capa 4 (Criptografía)**.
+> **Nota Arquitectónica:** Al unificar la red bajo un modelo Tor-Only, la superficie de ataque se reduce drásticamente. Cualquier intento de vulnerar la red requiere romper el protocolo de enrutamiento cebolla, mientras que la confidencialidad absoluta del contenido queda respaldada por la **Capa 4 (Criptografía)**.

@@ -1,65 +1,63 @@
-# Modelado de Amenazas y Perfil de Atacantes (Threat Model)
+# Modelado de Amenazas y Delimitación de Alcance (Threat Model & Scope)
+
+> **Nota del Arquitecto:** SignalFlow es un prototipo avanzado (_Proof of Concept_) desarrollado para demostrar patrones de arquitectura de grado misión-crítica. Como tal, este documento define límites estrictos sobre lo que el sistema intenta mitigar y lo que se acepta como riesgo residual (_Out of Scope_) debido a los límites de un entorno de desarrollo no empresarial.
 
 ## 1. Activos a Proteger (Assets)
 
-¿Qué es exactamente lo que tiene valor en nuestra aplicación y debemos defender a toda costa?
+Los elementos centrales que la arquitectura de SignalFlow defiende a toda costa son:
 
-- **1.1. Identidad de los Nodos (Metadatos):** La información sobre _quién_ está hablando con _quién_, y desde qué direcciones IP (públicas o locales).
-- **1.2. Contenido de las Comunicaciones (Mensajes):** El texto plano de las conversaciones en curso.
-- **1.3. Material Criptográfico:** Las llaves privadas de sesión y la llave maestra (Header LUKS) que permite el acceso a la base de datos local.
-- **1.4. Historial (Datos en Reposo):** Los mensajes almacenados temporalmente en el dispositivo físico.
+- **1.1. Metadatos Topológicos:** Información sobre quién habla con quién, cuándo y desde qué dirección IP.
+- **1.2. Contenido en Tránsito:** El texto plano de las comunicaciones viajando por la red.
+- **1.3. Contenido en Reposo:** El historial de mensajes almacenado físicamente en el disco local.
+- **1.4. Material Criptográfico Volátil:** Las llaves privadas en la memoria RAM necesarias para descifrar la bóveda local o los mensajes.
 
 ---
 
-## 2. Perfil del Adversario (Threat Actors)
+## 2. Perfil del Adversario y Alcance Defensivo (Threat Actors)
 
-Definimos tres niveles de adversarios, desde los más comunes hasta los más sofisticados, contra los cuales SignalFlow implementa contramedidas.
+Definimos los niveles de adversarios contra los cuales SignalFlow implementa contramedidas tácticas.
 
-### Nivel 1: El Analista de Red
+### Nivel 1: El Analista de Red Pasivo/ISP (✅ Totalmente Mitigado)
 
-En este nivel buscamos proteger al usuario de ataques que puedan comprometer su privacidad y seguridad en la red, o que puedan comprometer los dispositivos mediante un ataque Man-in-the-Middle (MITM).
+El atacante controla la red local, el ISP o es un nodo malicioso intentando interceptar tráfico.
 
-- **Capacidad:** El atacante puede interceptar el tráfico de red entre el cliente y el servidor.
-- **Objetivo:** Leer los mensajes o descubrir la ubicación IP del servidor central/clientes.
-- **Nuestra Defensa:** Cifrado Double Ratchet (Capa 4) aqui buscamos evitar que el atacante pueda leer los mensajes mediante este cifrado para esto debemos establecer un canal de comunicacion segurda entre los usuarios. Y ademas implementamos Enrutamiento vía Tor Hidden Services para evitar que el atacante pueda descubrir la ubicación IP del servidor central/clientes.
+- **Objetivo:** Leer mensajes, perfilar horarios de actividad o descubrir la IP de los usuarios.
+- **Nuestra Defensa:** Arquitectura _Tor-Only_ obligatoria y _Blind Dialing_. El uso del protocolo _Double Ratchet_ (Capa 4) asegura la confidencialidad, mientras que la red `.onion` (Capa 5) y la ofuscación de tiempos (_Jitter_) hacen inútil el análisis estadístico de tráfico.
 
-### Nivel 2: El Intruso Físico Básico
+### Nivel 2: Intruso Físico en Reposo (✅ Totalmente Mitigado)
 
-En este nivel tenemos atacantes que obtienen acceso al dispositivo fisico (computadora, smartphone, tablet, etc.) que corre SignalFlow. Este puede ser cuando este el dispositivo apagado o bloqueado.
+El dispositivo es confiscado, robado o analizado mientras está **apagado o la aplicación está cerrada**.
 
-- **Capacidad:** Los atacantes obtienen acceso físico al dispositivo cuando está apagado o bloqueado.
-- **Objetivo:** Extraer el disco duro o clonar la memoria flash para leer el historial.
-- **Nuestra Defensa:** Cifrado LUKS/FDE y Contraseña de usuario fuerte (Capa 2) evitando que puedan acceder a la información almacenada en el dispositivo, para esto usamos un deamon que bloquea el dispositivo fisicamente si detecta que esta siendo manipulado.
+- **Objetivo:** Extraer el disco duro, clonar la memoria flash y aplicar análisis forense para leer el historial.
+- **Nuestra Defensa:** Cifrado de base de datos a nivel de aplicación con **SQLCipher** (AES-256) y derivación de llaves con **Argon2id** (Capa 2). Políticas destructivas de SQLite (`PRAGMA secure_delete = FAST`) garantizan que los mensajes borrados sean irrecuperables.
 
-### Nivel 3: El Atacante OpSec Avanzado
+### Nivel 3: Atacante Físico Activo / Coerción (⚠️ Parcialmente Mitigado - Alcance Delimitado)
 
-Este nivel el atacante busca obtener acceso al dispositivo cuando este esta encendido para sacar la informacion del dispositivo, buscando alejar al usuario de su dispositivo y obtener acceso a el por la fuerza.
+El dispositivo es extraído mientras está desbloqueado (_Snatch-and-Grab_ / _Live-Extraction_), o el usuario es coaccionado bajo amenaza física.
 
-- **Capacidad:** El atacante extrae el dispositivo mientras está encendido y desbloqueado, o ejerce coerción física sobre el usuario para obtener contraseñas. Intenta conectar depuradores (Debuggers) o extraer volcados de memoria (RAM Dumps).
-- **Objetivo:** Leer los mensajes en pantalla, extraer llaves criptográficas directamente de la RAM, o forzar al usuario a revelar sus contactos.
-- **Nuestra Defensa:**
-  - **Anti-Coerción:** _Duress Password_ que despliega un entorno falso y purga llaves reales.
-  - **Extracción en Vivo:** _Sentinel Daemon_ que detecta manipulación del SO y ejecuta bloqueo criptográfico.
-  - **Robo Abrupto:** _Hardware Kill Cord_ (Desconexión USB) que activa el protocolo de pánico.
+- **Objetivo:** Extraer llaves directamente de la RAM o forzar la entrega de la contraseña.
+- **Nuestra Defensa:** - **Contra Coerción:** _Duress PIN_ (Negación Plausible) que despliega una interfaz limpia y purga el material sensible.
+  - **Contra Snatch-and-Grab:** _Hardware Kill Cord_ (Ej. un script de Rust que monitorea la desconexión de un USB específico) para detonar una sobreescritura de memoria con `zeroize`.
+  - **Límite del Alcance:** _No garantizamos_ la defensa contra ataques DMA (Direct Memory Access) a través de hardware especializado, ni contra herramientas forenses que congelen la RAM criogénicamente antes de que el Kill Cord reaccione.
 
 ---
 
 ## 3. Vectores de Ataque y Mitigación (STRIDE Methodology)
 
-| Vector de Ataque                        | Descripción del Riesgo                                        | Contramedida en SignalFlow                                                            | Capa de Defensa |
-| :-------------------------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------------------------ | :-------------- |
-| **Spoofing** (Suplantación)             | Un atacante se hace pasar por el Servidor de Señalización.    | El cliente solo se conecta mediante direcciones criptográficas `.onion` autenticadas. | Capa 5          |
-| **Tampering** (Manipulación)            | Intento de inyectar código mediante un depurador (GDB/Frida). | _Sentinel Daemon_ detecta el _attach_ y ejecuta la purga de RAM (Panic Mode).         | Capa 3          |
-| **Information Disclosure** (Fuga de IP) | WebRTC filtra la IP local a través de _ICE Candidates_.       | Forzar _mDNS_ (Multicast DNS) y obligar el uso de Servidores TURN ciegos.             | Capa 5          |
-| **Information Disclosure** (RAM Dump)   | Atacante congela la RAM para extraer llaves de sesión.        | Las llaves se escriben en _tmpfs_ y se sobrescriben inmediatamente después de usarse. | Capa 2          |
-| **Coerción Física**                     | El usuario es forzado a desbloquear la aplicación.            | _Duress Password_ abre interfaz de Negación Plausible y envía _Death Signal_.         | Capa 3 & 1      |
+| Vector de Ataque             | Descripción del Riesgo                                             | Contramedida en SignalFlow                                                                                                                                       |
+| :--------------------------- | :----------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Spoofing** (Suplantación)  | Un nodo se hace pasar por un destinatario.                         | Identidades atadas a llaves criptográficas de enrutamiento `.onion` (v3). No hay PKI centralizada que pueda ser vulnerada.                                       |
+| **Tampering** (Manipulación) | Modificación de la base de datos local para incriminar al usuario. | **Negación Plausible Práctica**: El cliente permite editar mensajes recibidos intencionalmente, invalidando el valor probatorio de la BBDD local en un tribunal. |
+| **Info Disclosure** (Red)    | Análisis de tráfico revela correlación temporal de mensajes.       | P2P estricto asíncrono. Los mensajes se encolan (_Store-and-Forward_) y se inyecta entropía temporal (_Jitter_) en los reintentos automáticos.                   |
+| **Info Disclosure** (RAM)    | Extracción de memoria revela llaves de sesión.                     | Uso riguroso de la librería `zeroize` en Rust para destruir el material criptográfico tan pronto sale del contexto de ejecución.                                 |
 
 ---
 
-## 4. Limitaciones del Modelo de Seguridad (Out of Scope)
+## 4. Riesgos Aceptados y Fuera de Alcance (Out of Scope)
 
-Ningún sistema es 100% seguro. Es vital reconocer qué escenarios **no** podemos mitigar:
+Para mantener la viabilidad del proyecto bajo el paradigma de _Seguridad del Lado de la Aplicación (App-Level Security)_, los siguientes escenarios se declaran explícitamente fuera de alcance:
 
-- **Keyloggers a Nivel de Hardware:** Si el atacante instaló un keylogger físico en el teclado del usuario antes de que instalara SignalFlow, las contraseñas estarán comprometidas.
-- **Cámaras Ocultas (Shoulder Surfing):** Si el atacante graba físicamente la pantalla del usuario mientras lee los mensajes.
-- **Ataques de Día Cero (0-Day) en el SO:** Si el Kernel de Linux, Android o iOS está comprometido desde la base por un actor estatal (ej. Pegasus), la aplicación no puede garantizar la seguridad del entorno.
+1. **Demonios Anti-Tampering a Nivel de SO (Kernel Rootkits):** Detectar si un atacante adjunta un depurador (GDB/Frida) o virtualiza el entorno requiere permisos de bajo nivel y controladores de Kernel personalizados. SignalFlow asume que el sistema operativo subyacente _no_ está comprometido por el atacante en tiempo de ejecución.
+2. **Ataques de Día Cero (0-Day) en el SO o Malware (Spyware/Pegasus):** Si el dispositivo host ya está infectado con un troyano de acceso remoto (RAT) con permisos de administrador, o hay un _keylogger_ a nivel de hardware, la seguridad de la aplicación es irrelevante.
+3. **Observadores Globales Pasivos (Global Passive Adversaries):** No mitigamos ataques teóricos donde una entidad (Ej. la NSA) tenga visibilidad simultánea sobre la totalidad de los nodos de la red Tor a nivel global.
+4. **Protección contra Shoulder Surfing:** Grabación visual (mediante cámaras de seguridad o en persona) de la pantalla del usuario mientras la aplicación está abierta.
