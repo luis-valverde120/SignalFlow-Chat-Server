@@ -1,8 +1,8 @@
 # SignalFlow: Tor-Only Anti-Forensic Messaging Infrastructure
 
-> **Nota del Desarrollador:** Este proyecto se encuentra actualmente en fase de diseño de arquitectura y modelado de amenazas (Threat Modeling).
+> **Nota del Desarrollador:** Este proyecto se encuentra actualmente en fase de diseño de arquitectura y modelado de amenazas (Threat Modeling). Este proyecto tiene varias limitaciones debido a que solo soy un estudiantes de ingenieria en ciencias de la computacion apasionado por la tecnologia y ciberseguridad, sin embargo me esfuerzo por aplicar buenas practicas de seguridad y seguir los estandares de la industria, y con este proyecto quiero aplicar mis habilidades en seguridad y desarrollo de software.
 
-SignalFlow no es simplemente una aplicación de mensajería; es una infraestructura de comunicación de grado militar diseñada bajo los principios estrictos de **Privacy by Design**, **Zero Trust** y **Minimización de Datos**. Su objetivo es proporcionar anonimato absoluto en la red y resistencia extrema contra extracciones forenses en vivo (Live-Extraction) o coerción física.
+SignalFlow no es simplemente una aplicación de mensajería; es una infraestructura de comunicación diseñada bajo los principios estrictos de **Privacy by Design**, **Zero Trust** y **Minimización de Datos**. Su objetivo es proporcionar anonimato absoluto en la red y resistencia extrema contra extracciones forenses en vivo (Live-Extraction) o coerción física.
 
 ## Características Principales (Core Architecture Features)
 
@@ -25,13 +25,13 @@ SignalFlow se fundamenta en los principios de _Zero-Trust_, _Minimización de Da
 
 La ingeniería de SignalFlow está dividida en un modelo de defensa en profundidad (Defense-in-Depth) de 5 capas. Para entender las decisiones técnicas, mitigaciones y el modelado de amenazas, consulta la documentación detallada:
 
-- 📚 **[Arquitectura](docs/00_architecture_overview.md):** Visión general del ecosistema, diagrama de componentes y el flujo de los datos a través del modelo híbrido.
-- 🛡️ **[Modelo de Amenazas](docs/01_threat_model.md):** Modelado de Amenazas (Threat Modeling). Análisis de perfiles de adversarios, metodología STRIDE y los vectores de ataque explícitamente mitigados (y los que quedan fuera de alcance).
-- 🌐 **[Redes y Enrutamiento](docs/02_network_and_routing.md):** **Capa 5 (Red)**. Topología P2P Tor-Only, enrutamiento asíncrono, _Blind Dialing_, y defensas contra análisis estadístico de tráfico y _Sybil Attacks_.
-- 🔐 **[Criptografía](docs/03_cryptography.md):** **Capa 4 (Criptografía)**. Implementación del protocolo _Double Ratchet_, intercambio de llaves y garantías de _Perfect Forward Secrecy_ (PFS).
-- 👁️ **[Seguridad Operativa](docs/04_application_security.md):** **Capa 3 (Seguridad Operativa)**. Defensas activas contra _spyware_ a nivel de sistema operativo, _Screen Shielding_ y ofuscación de inputs.
-- 💾 **[Almacenamiento y Memoria](docs/05_storage_and_memory.md):** **Capa 2 (Almacenamiento Local)**. SQLCipher, Bandeja de Salida Ciega (Blind Outbox), políticas destructivas de base de datos (`secure_delete`) y Negación Plausible Práctica.
-- 🔌 **[Hardware y Respuesta Física](docs/06_hardware_triggers.md):** **Capa 1 (Hardware & Respuesta Física)**. Mecanismos de emergencia _Anti-Live-Extraction_, integración del _Hardware Kill Cord_, _Duress PIN_ y protocolos de purga irreversible en RAM (`zeroize`).
+- **[Arquitectura](docs/00_architecture_overview.md):** Visión general del ecosistema, diagrama de componentes y el flujo de los datos a través del modelo híbrido.
+- **[Modelo de Amenazas](docs/01_threat_model.md):** Modelado de Amenazas (Threat Modeling). Análisis de perfiles de adversarios, metodología STRIDE y los vectores de ataque explícitamente mitigados (y los que quedan fuera de alcance).
+- **[Redes y Enrutamiento](docs/02_network_and_routing.md):** **Capa 5 (Red)**. Topología P2P Tor-Only, enrutamiento asíncrono, _Blind Dialing_, y defensas contra análisis estadístico de tráfico y _Sybil Attacks_.
+- **[Criptografía](docs/03_cryptography.md):** **Capa 4 (Criptografía)**. Implementación del protocolo _Double Ratchet_, intercambio de llaves y garantías de _Perfect Forward Secrecy_ (PFS).
+- **[Seguridad Operativa](docs/04_application_security.md):** **Capa 3 (Seguridad Operativa)**. Defensas activas contra _spyware_ a nivel de sistema operativo, _Screen Shielding_ y ofuscación de inputs.
+- **[Almacenamiento y Memoria](docs/05_storage_and_memory.md):** **Capa 2 (Almacenamiento Local)**. SQLCipher, Bandeja de Salida Ciega (Blind Outbox), políticas destructivas de base de datos (`secure_delete`) y Negación Plausible Práctica.
+- **[Hardware y Respuesta Física](docs/06_hardware_triggers.md):** **Capa 1 (Hardware & Respuesta Física)**. Mecanismos de emergencia _Anti-Live-Extraction_, integración del _Hardware Kill Cord_, _Duress PIN_ y protocolos de purga irreversible en RAM (`zeroize`).
 
 ## Descargo de Responsabilidad Legal y Ética
 

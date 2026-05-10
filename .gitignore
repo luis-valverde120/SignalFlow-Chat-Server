@@ -1,0 +1,71 @@
+.vscode/
+# ==========================================
+# 1. RUST & CARGO WORKSPACE (Core & Daemon)
+# ==========================================
+/target/
+**/*.rs.bk
+
+# ==========================================
+# 2. FRONTEND TAURI (TypeScript / Node.js)
+# ==========================================
+node_modules/
+/apps/tauri_ui/node_modules/
+
+# Artefactos de construcción (Builds)
+dist/
+build/
+out/
+/apps/tauri_ui/dist/
+
+# Logs de gestores de paquetes
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# 3. SEGURIDAD, CRIPTOGRAFÍA Y BASES DE DATOS (CRÍTICO)
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# Evita subir llaves o material criptográfico de prueba
+*.pem
+*.key
+*.pub
+*.p12
+*.pfx
+
+# ==========================================
+# 4. VARIABLES DE ENTORNO (SECRETS)
+# ==========================================
+.env
+.env.*
+!.env.example
+
+# ==========================================
+# 5. ENTORNOS DE DESARROLLO (IDE) Y SO
+# ==========================================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos del Sistema Operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

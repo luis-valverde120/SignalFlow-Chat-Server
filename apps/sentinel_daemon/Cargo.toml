@@ -1,0 +1,10 @@
+[package]
+name = "sentinel_daemon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Dependencias Locales (Monorepo)
+core_crypto = { path = "../../crates/core_crypto" }
+network_tor = { path = "../../crates/network_tor" }
+storage_vault = { path = "../../crates/storage_vault" }

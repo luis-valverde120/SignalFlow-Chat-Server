@@ -1,6 +1,6 @@
-# Modelado de Amenazas y Delimitación de Alcance (Threat Model & Scope)
+# Modelado de Amenazas
 
-> **Nota del Arquitecto:** SignalFlow es un prototipo avanzado (_Proof of Concept_) desarrollado para demostrar patrones de arquitectura de grado misión-crítica. Como tal, este documento define límites estrictos sobre lo que el sistema intenta mitigar y lo que se acepta como riesgo residual (_Out of Scope_) debido a los límites de un entorno de desarrollo no empresarial.
+> **Nota del Arquitecto:** SignalFlow es un prototipo avanzado (_Proof of Concept_) desarrollado para demostrar patrones de arquitectura de grado misión-crítica. Como tal, este documento define límites estrictos sobre lo que el sistema intenta mitigar y lo que se acepta como riesgo residual (_Out of Scope_) debido a los límites de un entorno de desarrollo no empresarial. Este proyecto tiene limitaciones de recursos, soy solo un estudiante de ingenieria en ciencias de la computacion apasionado por la tecnologia y ciberseguridad, sin embargo me esfuerzo por aplicar buenas practicas de seguridad y seguir los estandares de la industria, y con este proyecto quiero aprender y mejorar mis habilidades en desarrollo de software y ciberseguridad.
 
 ## 1. Activos a Proteger (Assets)
 
@@ -17,21 +17,21 @@ Los elementos centrales que la arquitectura de SignalFlow defiende a toda costa 
 
 Definimos los niveles de adversarios contra los cuales SignalFlow implementa contramedidas tácticas.
 
-### Nivel 1: El Analista de Red Pasivo/ISP (✅ Totalmente Mitigado)
+### Nivel 1: El Analista de Red Pasivo/ISP
 
 El atacante controla la red local, el ISP o es un nodo malicioso intentando interceptar tráfico.
 
 - **Objetivo:** Leer mensajes, perfilar horarios de actividad o descubrir la IP de los usuarios.
 - **Nuestra Defensa:** Arquitectura _Tor-Only_ obligatoria y _Blind Dialing_. El uso del protocolo _Double Ratchet_ (Capa 4) asegura la confidencialidad, mientras que la red `.onion` (Capa 5) y la ofuscación de tiempos (_Jitter_) hacen inútil el análisis estadístico de tráfico.
 
-### Nivel 2: Intruso Físico en Reposo (✅ Totalmente Mitigado)
+### Nivel 2: Intruso Físico en Reposo
 
 El dispositivo es confiscado, robado o analizado mientras está **apagado o la aplicación está cerrada**.
 
 - **Objetivo:** Extraer el disco duro, clonar la memoria flash y aplicar análisis forense para leer el historial.
 - **Nuestra Defensa:** Cifrado de base de datos a nivel de aplicación con **SQLCipher** (AES-256) y derivación de llaves con **Argon2id** (Capa 2). Políticas destructivas de SQLite (`PRAGMA secure_delete = FAST`) garantizan que los mensajes borrados sean irrecuperables.
 
-### Nivel 3: Atacante Físico Activo / Coerción (⚠️ Parcialmente Mitigado - Alcance Delimitado)
+### Nivel 3: Atacante Físico Activo / Coerción
 
 El dispositivo es extraído mientras está desbloqueado (_Snatch-and-Grab_ / _Live-Extraction_), o el usuario es coaccionado bajo amenaza física.
 
@@ -41,8 +41,6 @@ El dispositivo es extraído mientras está desbloqueado (_Snatch-and-Grab_ / _Li
   - **Límite del Alcance:** _No garantizamos_ la defensa contra ataques DMA (Direct Memory Access) a través de hardware especializado, ni contra herramientas forenses que congelen la RAM criogénicamente antes de que el Kill Cord reaccione.
 
 ---
-
-## 3. Vectores de Ataque y Mitigación (STRIDE Methodology)
 
 | Vector de Ataque             | Descripción del Riesgo                                             | Contramedida en SignalFlow                                                                                                                                       |
 | :--------------------------- | :----------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
