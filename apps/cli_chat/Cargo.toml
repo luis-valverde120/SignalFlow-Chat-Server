@@ -1,0 +1,15 @@
+[package]
+name = "cli_chat"
+version = "0.1.0"
+edition = "2021"
+description = "Interfaz de terminal para SignalFlow (Frontend inicial de prueba)"
+
+[dependencies]
+# Dependencias Locales (Monorepo)
+core_crypto = { path = "../../crates/core_crypto" }
+network_tor = { path = "../../crates/network_tor" }
+storage_vault = { path = "../../crates/storage_vault" }
+
+# Dependencias Externas (para UI de consola interactiva en el futuro)
+# dialoguer = "0.11"
+# console = "0.15"

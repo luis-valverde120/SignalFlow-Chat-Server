@@ -4,7 +4,8 @@ members = [
     "crates/network_tor",
     "crates/storage_vault",
     "apps/sentinel_daemon",
-    "apps/tauri_ui"
+    "apps/tauri_ui",
+    "apps/cli_chat"
 ]
 resolver = "2"
 
